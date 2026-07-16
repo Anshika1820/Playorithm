@@ -1,0 +1,306 @@
+PLAYORITHM DESIGN JOURNAL:
+
+Meaning:
+Play + Algorithm
+
+Goal:
+Build a collection of mini-games where every game demonstrates one or more Data Structures and Algorithms.
+Instead, it showcases software engineering, algorithmic thinking, and backend architecture to recruiters.
+
+Technology Stack:
+=================
+- Frontend:
+React
+Vite
+Tailwind CSS
+Responsibilities
+Display UI
+Take user input
+Show messages
+Store temporary UI state
+
+Frontend does not contain game logic.
+
+- Backend:
+Java
+Spring Boot
+Responsibilities
+Own all game logic
+Validate requests
+Decide game outcome
+Store active games
+Return API responses
+
+Backend is the single source of truth.
+
+First Game:
+===========
+Number Guessing Game:
+======================
+
+Purpose:
+Learn backend architecture before implementing algorithms.
+
+Backend Ownership:
+Decision:
+All game logic belongs inside Spring Boot.
+Reason:
+Security
+Single source of truth
+Every client behaves identically
+Easy future expansion (React, Android, iOS)
+
+Active Game Storage
+Data Structure:
+HashMap<GameId, NumberGameSession>
+Key: gameId
+Value: NumberGameSession
+Reason:
+Every request contains a gameId.
+The backend must quickly locate the correct game session.
+A HashMap provides efficient lookup even with many active games.
+
+Session Design:
+================
+Every game has its own session.
+Examples:
+NumberGameSession
+SnakeGameSession
+SudokuGameSession
+ChessGameSession
+Reason:
+Each game stores completely different information.
+Avoid creating one massive "God Class."
+
+NumberGameSession (Planned):
+============================
+Permanent State:
+gameId
+targetNumber
+difficulty
+attemptCount
+startTime
+isGameOver
+
+Derived State:
+===============
+High/Low message
+Difference between guess and target
+Remaining attempts
+Score
+Reason:
+Derived values can always be calculated.
+Permanent state must survive during gameplay.
+
+Difficulty:
+============
+Representation:
+enum Difficulty
+Values:
+EASY
+MEDIUM
+HARD
+Reason:
+Difficulty has a fixed set of values.
+Avoid invalid strings.
+Future versions may attach:
+Range
+Time Limit
+Maximum Attempts
+to each difficulty.
+
+API Principles:
+===============
+Start Game:
+Method:
+POST
+Reason:
+Starting a game creates a new resource.
+
+Guess:
+Method:
+POST
+Reason:
+Submitting a guess changes the game state.
+
+API Philosophy:
+===============
+Backend returns only what the frontend needs.
+Backend never exposes:
+targetNumber
+internal game state that would allow cheating
+
+Validation:
+===========
+Backend performs final validation.
+Reason:
+Anyone can bypass React using:
+Postman
+curl
+another client
+
+Spring Boot is the final authority.
+
+Game Rules:
+============
+Difficulty cannot change after a game starts.
+Reason:
+Changing difficulty mid-game creates inconsistent rules.
+To change difficulty:
+Start a new game.
+
+Game Recovery:
+==============
+Current Version
+Recover game while the backend is still running.
+Reason:
+Games are stored only in memory.
+Future Version:
+Database persistence.
+
+Guess History:
+==============
+Version 1
+Stored in React.
+Reason:
+Used only for display.
+
+Future versions may move it to the backend if replay or analytics are added.
+
+Memory Management:
+==================
+Completed games cannot remain forever.
+Future task:
+Design a cleanup strategy to prevent unlimited memory growth.
+
+Software Engineering Principles Learned:
+========================================
+Controller handles communication.
+Service contains business logic.
+Backend owns rules.
+Frontend owns presentation.
+HashMap chosen because of the access pattern, not just because it's "fast."
+Design architecture before writing code.
+APIs are contracts between frontend and backend.
+Every game deserves its own model.
+
+DSA Concepts Introduced:
+========================
+HashMap
+Key-Value mapping
+Time complexity in context
+State vs Derived State
+
+Future concepts will be introduced only when the project naturally requires them.
+
+Use DTOs:
+=========
+Decision:
+Use separate Request and Response DTOs instead of exposing NumberGameSession.
+
+Reason:
+Protect internal backend data (like targetNumber).
+Send only the data required by the frontend.
+Keep API contracts stable and easy to understand.
+Follow the Single Responsibility Principle.
+
+Don't store the current guess:
+===============================
+Decision:
+The current guess will not be stored in NumberGameSession.
+Reason:
+A guess is temporary request data.
+After processing, only the updated game state matters.
+Avoid storing unnecessary state.
+If future features (guess history, replay, analytics) require it, we'll introduce it then.
+
+Validate requests in a fixed order:
+===================================
+Decision:
+Every GuessRequest will follow the same validation pipeline.
+Receive GuessRequest
+        │
+        ▼
+Check if gameId exists
+        │
+        ▼
+Check if GameStatus == RUNNING
+        │
+        ▼
+Check if time has expired
+        │
+        ▼
+Validate guess range
+        │
+        ▼
+Compare guess with target
+        │
+        ▼
+Update NumberGameSession
+        │
+        ▼
+Create GuessResponse
+
+Reason:
+Prevent unnecessary processing.
+Fail as early as possible.
+Keep validation predictable.
+Separate validation from business logic.
+
+Validate gameId before anything else:
+======================================
+Decision:
+The first validation will always be checking whether the gameId exists in the HashMap.
+Reason:
+Without a valid game session, no other validation has meaning.
+This follows the principle:
+Fail Fast — Stop processing immediately when a required prerequisite is missing.
+
+Finished games cannot continue:
+===============================
+Decision:
+If GameStatus is not RUNNING, Spring Boot will reject every future guess.
+Example response:
+Game already finished.
+Reason:
+A finished game should be immutable.
+Allowing further guesses could:
+Corrupt the game state.
+Change attempts after completion.
+Produce inconsistent results.
+
+Keep finished games temporarily:
+================================
+Decision:
+Completed games will remain in memory for a short period before removal.
+Reason:
+This allows React to:
+Display the final result.
+Refresh the page without immediately losing the session.
+Avoid "Game Not Found" errors immediately after completion.
+Later, expired sessions will be removed automatically.
+
+Validation comes before business logic:
+========================================
+Decision:
+Spring Boot will never compare the guess with the target until all validations pass.
+Reason:
+Business logic should only execute on valid requests.
+This keeps the code easier to understand and reduces unexpected behavior.
+
+Organize code by feature:
+==========================
+Decision:
+Each game will have its own package containing all related classes.
+Example:
+numbergame/
+    controller/
+    service/
+    dto/
+    model/
+    enums/
+Reason:
+High cohesion: all code for one game stays together.
+Easier to navigate.
+Easier to maintain.
+New games can be added without affecting existing ones.

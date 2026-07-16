@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class PlayorithmBackendApplication {
+public class BackendPlayorithmApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(PlayorithmBackendApplication.class, args);
+		SpringApplication.run(BackendPlayorithmApplication.class, args);
 	}
 
 }
